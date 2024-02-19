@@ -3,17 +3,15 @@
 
 #include <iostream>
 
+#include <zmq.hpp>
+
 class Worker
 {
-    int sock;
-
-    static const int MAX_BUFFER_SIZE = 2048;
-
     public:
-        Worker(int sock) : sock(sock) { }
+        Worker() { }
         virtual ~Worker() = default;
 
-        virtual void run();
+        virtual void run(zmq::context_t& context);
 };
 
 #endif

@@ -13,28 +13,25 @@ extern "C"
     #include <arpa/inet.h>
 }
 
-void Worker::run() {
-    char* buf = new char[MAX_BUFFER_SIZE];
-    int numBytes;
+void Worker::run(zmq::context_t& context) {
+    zmq::socket_t socket = zmq::socket_t(context, zmq::socket_type::rep);
+    
+    socket.connect("inproc://workers");
 
     while (true) {
-        memset(buf, 0, MAX_BUFFER_SIZE);
-        if ((numBytes = recv(sock, buf, MAX_BUFFER_SIZE - 1, 0)) == -1) {
-            std::cerr << "Error receiving data!" << std::endl;
+        zmq::message_t request;
+
+        socket.recv(request, zmq::recv_flags::none);
+        
+        std::string message = request.to_string();
+
+        if (message.compare("quit") == 0) {
             break;
         }
 
-        if (strcmp(buf, "quit") == 0) {
-            break;
-        }
-
-        if (strcmp(buf, "addition") == 0) {
-            memset(buf, 0, MAX_BUFFER_SIZE);
-            strcpy(buf, "2+2=4");
-            if (send(sock, buf, strlen(buf), 0) == -1) {
-                std::cerr << "Error sending data!" << std::endl;
-                break;
-            }
+        if (message.compare("addition") == 0) {
+            std::string data{"2+2=4"};
+            socket.send(zmq::buffer(data), zmq::send_flags::none);
             continue;
         }
 
@@ -55,6 +52,8 @@ void Worker::run() {
             break;
         }
     }
+
+    socket.close();
 
     delete buf;
 }
