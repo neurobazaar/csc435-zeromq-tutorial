@@ -11,8 +11,7 @@ class Server
     std::string port;
     int numWorkers;
     int numTerminatedWorkers;
-
-    // ZMQ context initialized in the constructor with 4 IO threads
+    
     zmq::context_t context;
     
     public:

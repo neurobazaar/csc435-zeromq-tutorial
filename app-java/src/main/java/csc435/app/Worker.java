@@ -1,48 +1,47 @@
 package csc435.app;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 
 public class Worker implements Runnable {
-    private Socket socket;
+    private Server server;
+    private ZContext context;
 
-    public Worker(Socket socket) {
-        this.socket = socket;
+    public Worker(Server server, ZContext context) {
+        this.server = server;
+        this.context = context;
     }
 
     @Override
     public void run() {
-        try{
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            String inputLine;
+        ZMQ.Socket socket = context.createSocket(SocketType.REP);
+        socket.connect("inproc://workers");
 
-            while ((inputLine = in.readLine()) != null) {
-                if (inputLine.compareTo("quit") == 0) {
-                    break;
-                }
+        while(true) {
+            byte[] buffer = socket.recv(0);
+            String message = new String(buffer, ZMQ.CHARSET);
 
-                if (inputLine.compareTo("addition") == 0) {
-                    String outputLine = "2+2=4";
-                    out.println(outputLine);
-                    continue;
-                }
-
-                if (inputLine.compareTo("multiplication") == 0) {
-                    String outputLine = "2x2=4";
-                    out.println(outputLine);
-                    continue;
-                }
-                
-                String outputLine = "???";
-                out.println(outputLine);
+            if (message.compareTo("quit") == 0) {
+                break;
             }
-        } catch (IOException e) {
-            System.out.println("Socket IO error!");
-            e.printStackTrace();
+
+            if (message.compareTo("addition") == 0) {
+                message = "2+2=4";
+                socket.send(message.getBytes(ZMQ.CHARSET), 0);
+                continue;
+            }
+
+            if (message.compareTo("multiplication") == 0) {
+                message = "2x2=4";
+                socket.send(message.getBytes(ZMQ.CHARSET), 0);
+                continue;
+            }
+
+            message = "???";
+            socket.send(message.getBytes(ZMQ.CHARSET), 0);
         }
+
+        ser.workerTerminate();
     }
 }

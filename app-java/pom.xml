@@ -60,4 +60,12 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.zeromq</groupId>
+      <artifactId>jeromq</artifactId>
+      <version>0.6.0</version>
+    </dependency>
+  </dependencies>
 </project>

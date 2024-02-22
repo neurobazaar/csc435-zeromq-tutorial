@@ -1,6 +1,6 @@
 #include "Worker.hpp"
 
-void Worker::run(zmq::context_t& context) {
+void Worker::run() {
     // Create ZMQ reply socket for the worker
     zmq::socket_t socket(context, zmq::socket_type::rep);
     socket.connect("inproc://workers");
@@ -34,5 +34,5 @@ void Worker::run(zmq::context_t& context) {
 
     // Notify the main thread that the worker terminated
     server.workerTerminated();
-    //socket.close();
+    socket.close();
 }

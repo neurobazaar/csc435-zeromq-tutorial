@@ -3,7 +3,7 @@
 
 ### Requirements
 
-If you are implementing your solution in C++ you will need to have GCC 12.x and CMake 3.22.x installed on your system. You will also need to install the C/C++ ZeroMQ libraries and development files. On Ubuntu 22.04 you can install GCC and set it as default compiler and install ZeroMQ using the following commands:
+If you are implementing your solution in C++ you will need to have GCC 12.x and CMake 3.22.x installed on your system. You will also need to install the C/C++ ZeroMQ libraries and development files. On Ubuntu 22.04 you can install GCC, CMake and ZeroMQ, and set GCC as default compiler using the following commands:
 
 ```
 sudo apt install g++-12 gcc-12 cmake
@@ -17,10 +17,10 @@ git submodule init
 git submodule update
 ```
 
-To run the Java solution you will need to have Java 1.7.x and Maven 3.6.x installed on your systems. On Ubuntu 22.04 you can install Java and Maven using the following commands:
+To run the Java solution you will need to have Java 1.7.x and Maven 3.6.x installed on your systems. You will also need to install the JeroMQ (Java ZeroMQ) library and development jar. On Ubuntu 22.04 you can install Java, Maven and JeroMQ using the following commands:
 
 ```
-sudo apt install openjdk-17-jdk maven
+sudo apt install openjdk-17-jdk maven libjeromq-java
 
 ```
 
@@ -39,7 +39,7 @@ cmake --build build
 
 To run the C++ server (after you build the project) use the following command:
 ```
-./build/server <IP address> <port>
+./build/server <IP address> <port> <number of workers>
 ```
 
 To run the C++ client (after you build the project) use the following command:
@@ -51,10 +51,7 @@ To run the C++ client (after you build the project) use the following command:
 
 Server
 ```
-./build/server 127.0.0.1 12345
-Server started and waiting for connections!
-Server got connection from 127.0.0.1!
-Server got connection from 127.0.0.1!
+./build/server 127.0.0.1 12345 2
 ```
 
 Client 1
@@ -87,7 +84,7 @@ mvn package
 
 To run the Java Server (after you build the project) use the following command:
 ```
-java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Server <IP address> <port>
+java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Server <IP address> <port> <number of workers>
 ```
 
 To run the Java Client (after you build the project) use the following command:
@@ -99,10 +96,7 @@ java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Client <IP address> <port>
 
 Server
 ```
-java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Server 127.0.0.1 12345
-Server started and waiting for connections!
-Server got connection from 127.0.0.1!
-Server got connection from 127.0.0.1!
+java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Server 127.0.0.1 12345 2
 ```
 
 Client 1

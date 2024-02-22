@@ -7,19 +7,41 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+
 public class Server {
     
     private String address;
-    private Integer port;
-    private Integer maxNumConnections;
+    private String port;
+    private Integer numWorkers;
 
-    public Server(String address, int port, int maxNumConnections) {
+    private ZContext context;
+
+    public Server(String address, String port, int numWorkers) {
         this.address = address;
         this.port = port;
-        this.maxNumConnections = maxNumConnections;
+        this.numWorkers = numWorkers;
     }
 
     public void run() {
+        // ZMQ context initialized with 4 IO threads
+        context = new ZContext(4);
+        
+        // Create ZMQ router and dealer sockets
+        ZMQ.Socket routerSocket = context.createSocket(SocketType.ROUTER);
+        ZMQ.Socket dealerSocket = context.createSocket(SocketType.DEALER);
+
+        // Bind the router socket to the server listening address and port
+        // Bind the dealer socket to internal communcation channel
+        routerSocket.bind("tcp://" + address + ":" + port);
+        dealerSocket.bind("inproc://workers");
+
+        for (int i = 0; i < numWorkers; i++) {
+            Worker worker = new Worker(this, context);
+        }
+
         try {
             ArrayList<Thread> threads = new ArrayList<Thread>();
             ServerSocket serverSocket = new ServerSocket(port, maxNumConnections, InetAddress.getByName(address));
@@ -56,12 +78,12 @@ public class Server {
     }
 
     public static void main(String[] args) {
-        if (args.length != 2) {
-            System.err.println("USE: java Server <IP address> <port>");
+        if (args.length != 3) {
+            System.err.println("USE: java Server <IP address> <port> <number of workers");
             System.exit(1);
         }
 
-        Server server = new Server(args[0], Integer.parseInt(args[1]), 4);
+        Server server = new Server(args[0], args[1], Integer.parseInt(args[2]));
         server.run();
     }
 }

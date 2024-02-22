@@ -12,6 +12,9 @@ void Server::run()
     std::vector<std::shared_ptr<Worker>> workers;
     std::vector<std::thread> threads;
 
+    // ZMQ context initialized with 4 IO threads
+    context = zmq::context_t(4);
+
     // Create ZMQ router and dealer sockets
     zmq::socket_t routerSocket = zmq::socket_t(context, zmq::socket_type::router);
     zmq::socket_t dealerSocket = zmq::socket_t(context, zmq::socket_type::dealer);
@@ -23,9 +26,9 @@ void Server::run()
 
     // Create worker threads that connect to the dealer
     for (auto i = 0; i < numWorkers; i++) {
-        std::shared_ptr<Worker> worker = std::make_shared<Worker>(std::ref(*this));
+        std::shared_ptr<Worker> worker = std::make_shared<Worker>(std::ref(*this), std::ref(context));
         workers.push_back(worker);
-        threads.push_back(std::thread(&Worker::run, worker, std::ref(context)));
+        threads.push_back(std::thread(&Worker::run, worker));
     }
 
     // Create the ZMQ queue that forwards messages between the router and the dealer

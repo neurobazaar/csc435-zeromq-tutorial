@@ -10,12 +10,13 @@
 class Worker
 {
     Server& server;
+    zmq::context_t& context;
 
     public:
-        Worker(Server& server) : server(server) {  }
+        Worker(Server& server, zmq::context_t& context) : server(server), context(context) { }
         virtual ~Worker() = default;
 
-        virtual void run(zmq::context_t& context);
+        virtual void run();
 };
 
 #endif
