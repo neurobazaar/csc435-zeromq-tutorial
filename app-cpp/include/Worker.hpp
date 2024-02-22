@@ -5,10 +5,14 @@
 
 #include <zmq.hpp>
 
+#include "Server.hpp"
+
 class Worker
 {
+    Server& server;
+
     public:
-        Worker() { }
+        Worker(Server& server) : server(server) {  }
         virtual ~Worker() = default;
 
         virtual void run(zmq::context_t& context);

@@ -1,24 +1,11 @@
 #include <iostream>
 
-extern "C"
-{
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <string.h>
-    #include <unistd.h>
-    #include <sys/types.h>
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <netdb.h>
-    #include <arpa/inet.h>
-}
+#include <zmq.hpp>
 
 class Client
 {
     std::string address;
     std::string port;
-
-    static const int MAX_BUFFER_SIZE = 2048;
 
     public:
         Client(std::string address, std::string port) : address(address), port(port) { }
@@ -26,102 +13,30 @@ class Client
 
         virtual void run()
         {
-            int sockfd;
-            struct addrinfo hints;
-            struct addrinfo* servinfo;
-            struct addrinfo* p;
-            char addr[INET6_ADDRSTRLEN];
-            int rc;
+            // Create ZMQ context with 1 IO thread
+            zmq::context_t context(1);
 
-            char* buf = new char[MAX_BUFFER_SIZE];
-            int numBytes;
+            // Create ZMQ request socket and connect to server
+            zmq::socket_t socket(context, zmq::socket_type::req);
+            socket.connect("tcp://" + address + ":" + port);
 
-            memset(&hints, 0, sizeof(hints));
-            hints.ai_family = AF_UNSPEC;
-            hints.ai_socktype = SOCK_STREAM;
+            std::string data;
+            zmq::message_t reply;
 
-            if ((rc = getaddrinfo(address.c_str(), port.c_str(), &hints, &servinfo)) != 0) {
-                std::cerr << "Could not get address information!" << std::endl;
-                return;
-            }
+            data = "addition";
+            socket.send(zmq::buffer(data), zmq::send_flags::none);
+            auto res = socket.recv(reply, zmq::recv_flags::none);
+            std::cout << reply.to_string() << std::endl;
 
-            for(p = servinfo; p != NULL; p = p->ai_next) {
-                if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-                    std::cerr << "Could not create socket!" << std::endl;
-                    continue;
-                }
+            data = "multiplication";
+            socket.send(zmq::buffer(data), zmq::send_flags::none);
+            res = socket.recv(reply, zmq::recv_flags::none);
+            std::cout << reply.to_string() << std::endl;
 
-                if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-                    close(sockfd);
-                    std::cerr << "Could not connect to server!" << std::endl;
-                    continue;
-                }
+            data = "quit";
+            socket.send(zmq::buffer(data), zmq::send_flags::none);
 
-                break;
-            }
-
-            if (p == NULL)  {
-                std::cerr << "Server failed to bind!" << std::endl;
-                return;
-            }
-
-            if (((struct sockaddr *) &p)->sa_family == AF_INET) {
-                inet_ntop(p->ai_family, &(((struct sockaddr_in*) &p->ai_addr)->sin_addr), addr, sizeof(addr));
-            } else {
-                inet_ntop(p->ai_family, &(((struct sockaddr_in6*) &p->ai_addr)->sin6_addr), addr, sizeof(addr));
-            }
-
-            std::cout << "Client connected to " << address << "!" << std::endl;
-
-            freeaddrinfo(servinfo);
-
-            memset(buf, 0, MAX_BUFFER_SIZE);
-            strcpy(buf, "addition");
-            if (send(sockfd, buf, strlen(buf), 0) == -1) {
-                std::cerr << "Error sending data!" << std::endl;
-                delete buf;
-                close(sockfd);
-                return;
-            }
-
-            memset(buf, 0, MAX_BUFFER_SIZE);
-            if ((numBytes = recv(sockfd, buf, MAX_BUFFER_SIZE - 1, 0)) == -1) {
-                std::cerr << "Error receiving data!" << std::endl;
-                delete buf;
-                close(sockfd);
-                return;
-            }
-            std::cout << buf << std::endl;
-
-            memset(buf, 0, MAX_BUFFER_SIZE);
-            strcpy(buf, "multiplication");
-            if (send(sockfd, buf, strlen(buf), 0) == -1) {
-                std::cerr << "Error sending data!" << std::endl;
-                delete buf;
-                close(sockfd);
-                return;
-            }
-
-            memset(buf, 0, MAX_BUFFER_SIZE);
-            if ((numBytes = recv(sockfd, buf, MAX_BUFFER_SIZE - 1, 0)) == -1) {
-                std::cerr << "Error receiving data!" << std::endl;
-                delete buf;
-                close(sockfd);
-                return;
-            }
-            std::cout << buf << std::endl;
-
-            memset(buf, 0, MAX_BUFFER_SIZE);
-            strcpy(buf, "quit");
-            if (send(sockfd, buf, strlen(buf), 0) == -1) {
-                std::cerr << "Error sending data!" << std::endl;
-                delete buf;
-                close(sockfd);
-                return;
-            }
-
-            delete buf;
-            close(sockfd);
+            socket.close();
         }
 };
 

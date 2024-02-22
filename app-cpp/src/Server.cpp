@@ -1,74 +1,71 @@
+#include "Server.hpp"
+
 #include <iostream>
-#include <string>
 #include <vector>
 #include <thread>
+#include <memory>
 
-extern "C"
-{
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <string.h>
-    #include <unistd.h>
-    #include <sys/types.h>
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <netdb.h>
-    #include <arpa/inet.h>
-}
-
-#include <zmq.hpp>
 #include "Worker.hpp"
 
-class Server
+void Server::run()
 {
-    int numWorkers;
-    std::string address;
-    std::string port;
-    int maxNumConnections;
+    std::vector<std::shared_ptr<Worker>> workers;
+    std::vector<std::thread> threads;
 
-    public:
-        Server(int numWorkers, std::string address, std::string port, int maxNumConnections) : 
-            numWorkers(numWorkers), address(address), port(port), maxNumConnections(maxNumConnections) { }
-        virtual ~Server() = default;
+    // Create ZMQ router and dealer sockets
+    zmq::socket_t routerSocket = zmq::socket_t(context, zmq::socket_type::router);
+    zmq::socket_t dealerSocket = zmq::socket_t(context, zmq::socket_type::dealer);
 
-        virtual void run()
-        {
-            std::vector<Worker> workers;
-            std::vector<std::thread> threads;
+    // Bind the router socket to the server listening address and port
+    // Bind the dealer socket to internal communcation channel
+    routerSocket.bind("tcp://" + address + ":" + port);
+    dealerSocket.bind("inproc://workers");
 
-            zmq::context_t context = zmq::context_t(4, maxNumConnections);
+    // Create worker threads that connect to the dealer
+    for (auto i = 0; i < numWorkers; i++) {
+        std::shared_ptr<Worker> worker = std::make_shared<Worker>(std::ref(*this));
+        workers.push_back(worker);
+        threads.push_back(std::thread(&Worker::run, worker, std::ref(context)));
+    }
 
-            zmq::socket_t routerSocket = zmq::socket_t(context, zmq::socket_type::router);
-            zmq::socket_t dealerSocket = zmq::socket_t(context, zmq::socket_type::dealer);
+    // Create the ZMQ queue that forwards messages between the router and the dealer
+    try {
+        zmq::proxy(routerSocket, dealerSocket);
+    } catch(zmq::error_t& error) {
+        std::cout << "Terminating the server!" << std::endl;
+    }
 
-            routerSocket.bind("tpc://" + address + ":" + port);
-            dealerSocket.bind("inproc://workers");
+    for (auto i = 0; i < numWorkers; i++) {
+        threads[i].join();
+    }
 
-            for (auto i = 0; i < numWorkers; i++) {
-                workers.push_back(Worker());
-                threads.push_back(std::thread(&Worker::run, &(workers.back()), std::ref(context)));
-            }
+    routerSocket.close();
+    dealerSocket.close();
+    context.close();
+}
 
-            zmq::proxy(routerSocket, dealerSocket, NULL);
+void Server::workerTerminated()
+{
+    numTerminatedWorkers++;
 
-            routerSocket.close();
-            dealerSocket.close();
-            context.close();
-        }
-};
+    // Stop after two workers terminated
+    if (numTerminatedWorkers >= 2) {
+        context.shutdown();
+    }
+}
 
 int main(int argc, char** argv)
 {
     if (argc != 4) {
-        std::cerr << "USE: ./server <number of worker threads> <IP address> <port>" << std::endl;
+        std::cerr << "USE: ./server <IP address> <port> <number of worker threads>" << std::endl;
         return 1;
     }
 
-    std::string numWorkers(argv[1]);
-    std::string address(argv[2]);
-    std::string port(argv[3]);
+    std::string address(argv[1]);
+    std::string port(argv[2]);
+    int numWorkers(std::atoi(argv[3]));
 
-    Server server(numWorkers, address, port, 16);
+    Server server(address, port, numWorkers);
     server.run();
     
     return 0;
