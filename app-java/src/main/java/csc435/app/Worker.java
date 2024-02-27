@@ -15,9 +15,10 @@ public class Worker implements Runnable {
 
     @Override
     public void run() {
+        // Create ZMQ reply socket for the worker
         ZMQ.Socket socket = context.createSocket(SocketType.REP);
         socket.connect("inproc://workers");
-
+        
         while(true) {
             byte[] buffer = socket.recv(0);
             String message = new String(buffer, ZMQ.CHARSET);
@@ -42,6 +43,8 @@ public class Worker implements Runnable {
             socket.send(message.getBytes(ZMQ.CHARSET), 0);
         }
 
-        ser.workerTerminate();
+        // Notify the main thread that the worker terminated
+        server.workerTerminate();
+        socket.close();
     }
 }

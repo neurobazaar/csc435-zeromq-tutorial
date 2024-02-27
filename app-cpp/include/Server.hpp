@@ -4,6 +4,7 @@
 #include <string>
 
 #include <zmq.hpp>
+#include <mutex>
 
 class Server
 {
@@ -13,6 +14,7 @@ class Server
     int numTerminatedWorkers;
     
     zmq::context_t context;
+    std::mutex mutex;
     
     public:
         Server(std::string address, std::string port, int numWorkers) : 

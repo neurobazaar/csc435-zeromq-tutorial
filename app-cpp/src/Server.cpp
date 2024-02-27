@@ -34,9 +34,7 @@ void Server::run()
     // Create the ZMQ queue that forwards messages between the router and the dealer
     try {
         zmq::proxy(routerSocket, dealerSocket);
-    } catch(zmq::error_t& error) {
-        std::cout << "Terminating the server!" << std::endl;
-    }
+    } catch(zmq::error_t& error) { }
 
     for (auto i = 0; i < numWorkers; i++) {
         threads[i].join();
@@ -49,6 +47,7 @@ void Server::run()
 
 void Server::workerTerminated()
 {
+    std::lock_guard<std::mutex> lock(mutex);
     numTerminatedWorkers++;
 
     // Stop after two workers terminated

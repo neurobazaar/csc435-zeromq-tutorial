@@ -1,10 +1,5 @@
 package csc435.app;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import org.zeromq.SocketType;
@@ -16,64 +11,63 @@ public class Server {
     private String address;
     private String port;
     private Integer numWorkers;
+    private Integer numTerminatedWorkers;
 
     private ZContext context;
+    private ZMQ.Socket routerSocket;
+    private ZMQ.Socket dealerSocket;
 
     public Server(String address, String port, int numWorkers) {
         this.address = address;
         this.port = port;
         this.numWorkers = numWorkers;
+        numTerminatedWorkers = 0;
     }
 
     public void run() {
+        ArrayList<Thread> threads = new ArrayList<Thread>();
+
         // ZMQ context initialized with 4 IO threads
         context = new ZContext(4);
         
         // Create ZMQ router and dealer sockets
-        ZMQ.Socket routerSocket = context.createSocket(SocketType.ROUTER);
-        ZMQ.Socket dealerSocket = context.createSocket(SocketType.DEALER);
+        routerSocket = context.createSocket(SocketType.ROUTER);
+        dealerSocket = context.createSocket(SocketType.DEALER);
 
         // Bind the router socket to the server listening address and port
-        // Bind the dealer socket to internal communcation channel
+        // Bind the dealer socket to worker internal communcation channel
         routerSocket.bind("tcp://" + address + ":" + port);
         dealerSocket.bind("inproc://workers");
 
         for (int i = 0; i < numWorkers; i++) {
             Worker worker = new Worker(this, context);
+            Thread thread = new Thread(worker);
+            thread.start();
+            threads.add(thread);
         }
 
+        // Create the ZMQ queue that forwards messages between the router and the dealer
+        ZMQ.proxy(routerSocket, dealerSocket, null);
+
         try {
-            ArrayList<Thread> threads = new ArrayList<Thread>();
-            ServerSocket serverSocket = new ServerSocket(port, maxNumConnections, InetAddress.getByName(address));
-            int i = 2;
-
-            System.out.println("Server started and waiting for connections!");
-
-            while (i > 0) {
-                Socket clientSocket = serverSocket.accept();
-
-                System.out.println("Server got connection from " + clientSocket.getInetAddress());
-
-                Thread td = new Thread(new Worker(clientSocket));
-                td.start();
-                threads.add(td);
-                i--;
+            for (int i = 0; i < numWorkers; i++) {
+                threads.get(i).join();
             }
-
-            serverSocket.close();
-
-            for (Thread td : threads) {
-                td.join();
-            }
-        } catch (UnknownHostException e) {
-            System.err.println("Could not compute IP address!");
-            e.printStackTrace();
-        } catch (IOException e) {
-            System.err.println("Socket error!");
-            e.printStackTrace();
         } catch (InterruptedException e) {
-            System.err.println("Thread join error!");
             e.printStackTrace();
+        }
+
+        routerSocket.close();
+        dealerSocket.close();
+        context.close();
+    }
+
+    public synchronized void workerTerminate() {
+        numTerminatedWorkers++;
+
+        // Stop after two workers terminated
+        if (numTerminatedWorkers >= 2) {
+            context.destroy();
         }
     }
 

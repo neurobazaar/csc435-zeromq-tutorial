@@ -1,12 +1,8 @@
 package csc435.app;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 
 public class Client {
     private String address;
@@ -18,38 +14,31 @@ public class Client {
     }
 
     public void run() {
-        try {
-            Socket socket = new Socket(InetAddress.getByName(address), port);
+        // Create ZMQ context with 1 IO thread
+        ZContext context = new ZContext(1);
 
-            System.out.println("Client connected to " + address);
+        // Create ZMQ request socket and connect to server
+        ZMQ.Socket socket = context.createSocket(SocketType.REQ);
+        socket.connect("tcp://" + address + ":" + port);
 
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        String message;
+        byte[] buffer;
+        
+        message = "addition";
+        socket.send(message.getBytes(ZMQ.CHARSET), 0);
+        buffer = socket.recv(0);
+        System.out.println(new String(buffer, ZMQ.CHARSET));
 
-            String outputLine;
-            String inputLine;
+        message = "multiplication";
+        socket.send(message.getBytes(ZMQ.CHARSET), 0);
+        buffer = socket.recv(0);
+        System.out.println(new String(buffer, ZMQ.CHARSET));
 
-            outputLine = "addition";
-            out.println(outputLine);
-            inputLine = in.readLine();
-            System.out.println(inputLine);
+        message = "quit";
+        socket.send(message.getBytes(ZMQ.CHARSET), 0);
 
-            outputLine = "multiplication";
-            out.println(outputLine);
-            inputLine = in.readLine();
-            System.out.println(inputLine);
-
-            outputLine = "quit";
-            out.println(outputLine);
-            
-            socket.close();
-        } catch (UnknownHostException e) {
-            System.err.println("Could not compute IP address!");
-            e.printStackTrace();
-        } catch (IOException e) {
-            System.err.println("Socket error!");
-            e.printStackTrace();
-        }
+        socket.close();
+        context.close();
     }
 
     public static void main(String[] args) {

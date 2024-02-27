@@ -37,6 +37,7 @@ class Client
             socket.send(zmq::buffer(data), zmq::send_flags::none);
 
             socket.close();
+            context.close();
         }
 };
 

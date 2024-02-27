@@ -7,9 +7,7 @@ void Worker::run() {
 
     while (true) {
         zmq::message_t request;
-
         auto res = socket.recv(request, zmq::recv_flags::none);
-        
         std::string message = request.to_string();
 
         if (message.compare("quit") == 0) {

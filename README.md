@@ -84,24 +84,24 @@ mvn package
 
 To run the Java Server (after you build the project) use the following command:
 ```
-java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Server <IP address> <port> <number of workers>
+java -cp target/app-java-1.0-SNAPSHOT-jar-with-dependencies.jar csc435.app.Server <IP address> <port> <number of workers>
 ```
 
 To run the Java Client (after you build the project) use the following command:
 ```
-java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Client <IP address> <port>
+java -cp target/app-java-1.0-SNAPSHOT-jar-with-dependencies.jar csc435.app.Client <IP address> <port>
 ```
 
 #### Example
 
 Server
 ```
-java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Server 127.0.0.1 12345 2
+java -cp target/app-java-1.0-SNAPSHOT-jar-with-dependencies.jar csc435.app.Server 127.0.0.1 12345 2
 ```
 
 Client 1
 ```
-java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Client 127.0.0.1 12345
+java -cp target/app-java-1.0-SNAPSHOT-jar-with-dependencies.jar csc435.app.Client 127.0.0.1 12345
 Client connected to 127.0.0.1!
 2+2=4
 2x2=4
@@ -109,7 +109,7 @@ Client connected to 127.0.0.1!
 
 Client 2
 ```
-java -cp target/app-java-1.0-SNAPSHOT.jar csc435.app.Client 127.0.0.1 12345
+java -cp target/app-java-1.0-SNAPSHOT-jar-with-dependencies.jar csc435.app.Client 127.0.0.1 12345
 Client connected to 127.0.0.1!
 2+2=4
 2x2=4
